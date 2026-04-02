@@ -4,20 +4,19 @@ Upsize [Pizza Comrades](https://www.satflow.com/ordinals/pizza-comrades) ordinal
 
 **Cost:** Processing runs entirely in the visitor’s browser. No image API, no backend storage — deploy on [Vercel](https://vercel.com) free tier or any static host.
 
-## Push to GitHub (new repo `supersize`)
+## Push to GitHub (repo name `supersize`)
 
-Use the same GitHub PAT you use elsewhere. In PowerShell from this folder:
+Use the same Personal Access Token as your other projects. In PowerShell, from this repo’s root:
 
 ```powershell
+cd C:\Users\PreSafu\Desktop\supersize   # or your path
 $env:GITHUB_TOKEN = "ghp_YOUR_TOKEN_HERE"
-git init
-git add -A
-git commit -m "Initial commit"
-git branch -M main
 .\scripts\push-to-github.ps1
 ```
 
-The script creates `https://github.com/<you>/supersize` if it does not exist, then pushes `main`. Do not commit the token; only set `$env:GITHUB_TOKEN` for that session.
+The script creates `https://github.com/<you>/supersize` if it does not exist, then pushes the current branch (usually `main`). Set `$env:GITHUB_TOKEN` only for that session — never commit the token.
+
+If you are starting from a zip with no `.git` folder: `git init`, `git add -A`, `git commit -m "Initial commit"`, `git branch -M main`, then run the script above.
 
 ## Develop
 
