@@ -14,10 +14,13 @@ const config: Config = {
           dark: "#1a0a0c",
           crust: "#d4a574",
           cheese: "#f5e6a3",
+          gold: "#c9a227",
+          sauce: "#8b1538",
         },
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
+        "display-pc": ["var(--font-display)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       boxShadow: {

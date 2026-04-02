@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
-      <body className="font-mono">{children}</body>
+      <body className="font-mono pc-stripes">{children}</body>
     </html>
   );
 }

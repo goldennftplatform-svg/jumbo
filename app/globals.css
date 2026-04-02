@@ -2,16 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Optional local display font — works when Blockscript is installed on the viewer’s machine */
+@font-face {
+  font-family: "Blockscript";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src:
+    local("Blockscript"),
+    local("Block Script"),
+    local("BLOCKSCRIPT");
+}
+
 :root {
   --bg: #0d0608;
   --fg: #f8f0e8;
+  --pizza-gold: #c9a227;
+  --pizza-deep: #120709;
 }
 
 body {
-  @apply min-h-screen bg-comrade-dark text-comrade-cheese antialiased;
+  @apply min-h-screen text-comrade-cheese antialiased;
+  background-color: var(--pizza-deep);
   background-image:
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(196, 30, 58, 0.25), transparent),
-    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(212, 165, 116, 0.08), transparent);
+    radial-gradient(ellipse 100% 60% at 50% -15%, rgba(196, 30, 58, 0.45), transparent 55%),
+    radial-gradient(ellipse 70% 40% at 110% 80%, rgba(201, 162, 39, 0.12), transparent),
+    radial-gradient(ellipse 50% 30% at -10% 60%, rgba(196, 30, 58, 0.15), transparent),
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.12) 2px,
+      rgba(0, 0, 0, 0.12) 4px
+    );
+}
+
+.pc-stripes {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(196, 30, 58, 0.07) 0px,
+    rgba(196, 30, 58, 0.07) 28px,
+    transparent 28px,
+    transparent 56px
+  );
+}
+
+/* Toggle on: display headings use Blockscript when installed */
+.blockscript-theme .font-display-pc {
+  font-family: "Blockscript", var(--font-display), ui-sans-serif, system-ui, sans-serif !important;
 }
 
 ::selection {
