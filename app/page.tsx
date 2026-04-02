@@ -265,7 +265,7 @@ export default function Home() {
         </section>
 
         <p className="mt-3 text-center text-[11px] text-zinc-600">
-          Huge PNGs often won’t open in basic viewers. Use JPEG unless you need lossless.
+          JPEG is flattened on white (no transparency). Use PNG only if you need lossless.
         </p>
 
         <p className="mt-4 text-center text-xs text-zinc-600">

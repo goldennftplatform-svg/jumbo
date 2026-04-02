@@ -34,7 +34,8 @@ function clampEdge(n: number): number {
 }
 
 /**
- * Square crop + Lanczos resize, then encode (JPEG default = small, viewable files).
+ * JPEG has no alpha. Browsers composite transparent / unset canvas pixels onto black when
+ * encoding JPEG → solid black image. We always paint onto opaque white-backed canvases.
  */
 export async function upscaleToTarget(
   image: HTMLImageElement,
@@ -61,13 +62,19 @@ export async function upscaleToTarget(
   const sourceCanvas = document.createElement("canvas");
   sourceCanvas.width = side;
   sourceCanvas.height = side;
-  const sctx = sourceCanvas.getContext("2d");
+  const sctx = sourceCanvas.getContext("2d", { alpha: false });
   if (!sctx) throw new Error("Could not get 2D context.");
+  sctx.fillStyle = "#ffffff";
+  sctx.fillRect(0, 0, side, side);
   sctx.drawImage(image, sx, sy, side, side, 0, 0, side, side);
 
   const outCanvas = document.createElement("canvas");
   outCanvas.width = outEdge;
   outCanvas.height = outEdge;
+  const octx = outCanvas.getContext("2d", { alpha: false });
+  if (!octx) throw new Error("Could not get 2D context.");
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, outEdge, outEdge);
 
   await pica.resize(sourceCanvas, outCanvas, { quality: 3 });
 
@@ -75,8 +82,12 @@ export async function upscaleToTarget(
 
   const mime = format === "jpeg" ? "image/jpeg" : "image/png";
 
+  // Extra flatten for JPEG: some engines still premultiply oddly from WebGL paths in pica
+  const encodeCanvas =
+    format === "jpeg" ? flattenOpaqueWhite(outCanvas) : outCanvas;
+
   return new Promise((resolve, reject) => {
-    outCanvas.toBlob(
+    encodeCanvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
         else
@@ -94,14 +105,34 @@ export async function upscaleToTarget(
   });
 }
 
+function flattenOpaqueWhite(source: HTMLCanvasElement): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = source.width;
+  c.height = source.height;
+  const ctx = c.getContext("2d", { alpha: false });
+  if (!ctx) return source;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(source, 0, 0);
+  return c;
+}
+
 export function fileToImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
+      const finish = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      const p = img.decode?.();
+      if (p && typeof p.then === "function") {
+        p.then(finish).catch(finish);
+      } else {
+        finish();
+      }
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
