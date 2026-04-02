@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, type DragEvent } from "react";
-import { TARGET, fileToImage, upscaleTo1028 } from "@/lib/upscale";
+import { TARGET, fileToImage, upscaleToTarget } from "@/lib/upscale";
 
 type Status = "idle" | "working" | "done" | "error";
 
@@ -23,7 +23,7 @@ export default function Home() {
       setHint(null);
       resetOutput();
       try {
-        const blob = await upscaleTo1028(img, setProgress);
+        const blob = await upscaleToTarget(img, setProgress);
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
         setStatus("done");

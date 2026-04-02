@@ -1,6 +1,7 @@
 import type Pica from "pica";
 
-export const TARGET = 1028;
+/** Output edge length (px). Was 1028; 2× that for heavier upscales. */
+export const TARGET = 2056;
 
 export async function loadPica(): Promise<typeof Pica> {
   const mod = await import("pica");
@@ -10,7 +11,7 @@ export async function loadPica(): Promise<typeof Pica> {
 /**
  * Draw image onto a square canvas (cover crop to square), then Lanczos-resize to TARGET×TARGET.
  */
-export async function upscaleTo1028(
+export async function upscaleToTarget(
   image: HTMLImageElement,
   onProgress?: (stage: string) => void
 ): Promise<Blob> {
