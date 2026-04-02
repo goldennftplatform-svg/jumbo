@@ -1,7 +1,7 @@
 import type Pica from "pica";
 
-/** Output edge length (px). Was 1028; 2× that for heavier upscales. */
-export const TARGET = 2056;
+/** Output edge length (px). Large square for print / editing. */
+export const TARGET = 8192;
 
 export async function loadPica(): Promise<typeof Pica> {
   const mod = await import("pica");

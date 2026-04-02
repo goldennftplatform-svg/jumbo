@@ -14,12 +14,12 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pizza Comrades Upsizer — 2056×2056 for the kitchen",
+  title: "Pizza Comrades Upsizer — high-res square export",
   description:
-    "Upsize your Pizza Comrades ordinals art to 2056×2056 with Lanczos-quality resampling. Runs in your browser — free, no uploads to our servers.",
+    "Upsize Pizza Comrades ordinal art to 8192×8192 in the browser. Lanczos resampling. No uploads.",
   openGraph: {
     title: "Pizza Comrades Upsizer",
-    description: "2056×2056 upscale in-browser. For comrades who cook.",
+    description: "8192×8192 upscale in-browser.",
   },
 };
 
@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
-      <body className="font-mono pc-stripes">{children}</body>
+      <body className="font-mono">{children}</body>
     </html>
   );
 }
