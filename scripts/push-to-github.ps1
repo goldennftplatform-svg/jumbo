@@ -63,10 +63,13 @@ if (-not $branch) {
   $branch = "main"
 }
 
+$clean = "https://github.com/$owner/$RepoName.git"
+$authed = "https://x-access-token:$token@github.com/$owner/$RepoName.git"
+
 git remote remove origin 2>$null
-git remote add origin "https://github.com/$owner/$RepoName.git"
+git remote add origin $clean
+git remote set-url origin $authed
+git push -u origin $branch
+git remote set-url origin $clean
 
-$pushUrl = "https://x-access-token:$token@github.com/$owner/$RepoName.git"
-git push -u $pushUrl $branch
-
-Write-Host "Pushed $branch. Remote: https://github.com/$owner/$RepoName (token not stored in .git/config)."
+Write-Host "Pushed $branch. Remote: $clean (token removed from git config)."
