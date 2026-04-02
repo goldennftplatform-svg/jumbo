@@ -14,12 +14,12 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pizza Comrades Upsizer — high-res square export",
+  title: "Pizza Comrades Upsizer — square export",
   description:
-    "Upsize Pizza Comrades ordinal art to 8192×8192 in the browser. Lanczos resampling. No uploads.",
+    "Upsize Pizza Comrades ordinal art in the browser. Up to 4096×4096, JPEG or PNG. No uploads.",
   openGraph: {
     title: "Pizza Comrades Upsizer",
-    description: "8192×8192 upscale in-browser.",
+    description: "Lanczos upscale in-browser.",
   },
 };
 

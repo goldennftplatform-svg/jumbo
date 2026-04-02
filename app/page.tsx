@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, type DragEvent } from "react";
-import { TARGET, fileToImage, upscaleToTarget } from "@/lib/upscale";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
+import {
+  EDGE_OPTIONS,
+  type EdgeOption,
+  type ExportFormat,
+  fileToImage,
+  upscaleToTarget,
+} from "@/lib/upscale";
 
 const LS_BLOCKSCRIPT = "pc-blockscript";
-/** Preview frame: fixed 512×512 so the UI stays compact; file export is still TARGET×TARGET. */
 const PREVIEW = 512;
 
 type Status = "idle" | "working" | "done" | "error";
@@ -16,6 +21,8 @@ export default function Home() {
   const [progress, setProgress] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [blockscript, setBlockscript] = useState(false);
+  const [edge, setEdge] = useState<EdgeOption>(4096);
+  const [format, setFormat] = useState<ExportFormat>("jpeg");
 
   useEffect(() => {
     try {
@@ -24,6 +31,19 @@ export default function Home() {
       /* ignore */
     }
   }, []);
+
+  const settingsBoot = useRef(true);
+  useEffect(() => {
+    if (settingsBoot.current) {
+      settingsBoot.current = false;
+      return;
+    }
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setStatus((s) => (s === "done" ? "idle" : s));
+  }, [edge, format]);
 
   const setBlockscriptPersist = useCallback((value: boolean) => {
     setBlockscript(value);
@@ -45,7 +65,11 @@ export default function Home() {
       setHint(null);
       resetOutput();
       try {
-        const blob = await upscaleToTarget(img, setProgress);
+        const blob = await upscaleToTarget(img, setProgress, {
+          edge,
+          format,
+          jpegQuality: 0.92,
+        });
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
         setStatus("done");
@@ -56,7 +80,7 @@ export default function Home() {
         setProgress("");
       }
     },
-    [resetOutput]
+    [resetOutput, edge, format]
   );
 
   const onFile = useCallback(
@@ -103,22 +127,23 @@ export default function Home() {
 
   const download = useCallback(() => {
     if (!previewUrl) return;
+    const ext = format === "jpeg" ? "jpg" : "png";
     const a = document.createElement("a");
     a.href = previewUrl;
-    a.download = `pizza-comrades-${TARGET}x${TARGET}.png`;
+    a.download = `pizza-comrades-${edge}x${edge}.${ext}`;
     a.click();
-  }, [previewUrl]);
+  }, [previewUrl, edge, format]);
 
   return (
     <div className={blockscript ? "blockscript-theme min-h-screen" : "min-h-screen"}>
       <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 py-10 sm:px-8">
-        <div className="mb-8 flex items-start justify-between gap-4 border-b border-zinc-800 pb-6">
+        <div className="mb-8 flex flex-col gap-4 border-b border-zinc-800 pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="font-display-pc text-2xl tracking-wide text-zinc-100 sm:text-3xl">
               Pizza Comrades Upsizer
             </h1>
             <p className="mt-1 text-xs text-zinc-500">
-              Export {TARGET}×{TARGET} px · preview {PREVIEW}×{PREVIEW}
+              Preview {PREVIEW}×{PREVIEW} · export up to 4096×4096
             </p>
           </div>
           <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-zinc-500">
@@ -140,6 +165,36 @@ export default function Home() {
                 }`}
               />
             </button>
+          </label>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-zinc-400">
+          <label className="flex items-center gap-2">
+            <span className="text-zinc-500">Size</span>
+            <select
+              value={edge}
+              onChange={(e) => setEdge(Number(e.target.value) as EdgeOption)}
+              disabled={status === "working"}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-200"
+            >
+              {EDGE_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n}×{n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-zinc-500">File</span>
+            <select
+              value={format}
+              onChange={(e) => setFormat(e.target.value as ExportFormat)}
+              disabled={status === "working"}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-200"
+            >
+              <option value="jpeg">JPEG — smaller, opens everywhere (recommended)</option>
+              <option value="png">PNG — lossless, much larger</option>
+            </select>
           </label>
         </div>
 
@@ -184,7 +239,7 @@ export default function Home() {
           {previewUrl && status === "done" && (
             <div className="space-y-3 border-t border-zinc-800 p-6">
               <p className="text-center text-sm text-zinc-500">
-                Preview ({PREVIEW}×{PREVIEW}) · file is {TARGET}×{TARGET}
+                Preview ({PREVIEW}×{PREVIEW}) · export {edge}×{edge} {format.toUpperCase()}
               </p>
               <div className="mx-auto flex aspect-square w-full max-h-[512px] max-w-[512px] items-center justify-center bg-zinc-950 ring-1 ring-zinc-800">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -202,12 +257,16 @@ export default function Home() {
                   onClick={download}
                   className="font-display-pc rounded-lg bg-comrade-red px-8 py-2.5 text-sm tracking-wide text-white transition hover:bg-red-700"
                 >
-                  Download PNG
+                  Download {format === "jpeg" ? "JPEG" : "PNG"}
                 </button>
               </div>
             </div>
           )}
         </section>
+
+        <p className="mt-3 text-center text-[11px] text-zinc-600">
+          Huge PNGs often won’t open in basic viewers. Use JPEG unless you need lossless.
+        </p>
 
         <p className="mt-4 text-center text-xs text-zinc-600">
           <a

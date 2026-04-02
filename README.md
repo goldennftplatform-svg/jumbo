@@ -2,7 +2,7 @@
 
 **Repo:** [github.com/goldennftplatform-svg/jumbo](https://github.com/goldennftplatform-svg/jumbo)
 
-Upsize [Pizza Comrades](https://www.satflow.com/ordinals/pizza-comrades) ordinal art to **8192×8192** PNG in the browser (preview shown at **512×512**). Uses [pica](https://github.com/nodeca/pica) (Lanczos resampling). Very large exports need a decent amount of RAM.
+Upsize [Pizza Comrades](https://www.satflow.com/ordinals/pizza-comrades) ordinal art in the browser — **2048–4096** px edge, **JPEG (default)** or **PNG**. Preview **512×512**. Uses [pica](https://github.com/nodeca/pica) (Lanczos). **JPEG** keeps files small enough to download and open; **PNG** is lossless but can be huge.
 
 **Cost:** Processing runs entirely in the visitor’s browser. No image API, no backend storage — deploy on [Vercel](https://vercel.com) free tier or any static host.
 
