@@ -8,6 +8,20 @@ Upsize [Pizza Comrades](https://www.satflow.com/ordinals/pizza-comrades) ordinal
 
 Local clone: `git clone https://github.com/goldennftplatform-svg/jumbo.git`
 
+## Download the whole Pizza Comrades collection (images to a folder)
+
+No API key. Ordinals exposes **child inscriptions** for a **parent** inscription (the collection cover on Satflow). The script lists every child via `https://ordinals.com/r/children/{parent}/{page}`, then downloads each file from `ordinals.com/content/...` (Satflow CDN as fallback).
+
+```bash
+# Only build manifest.json with all inscription IDs (~2.2k)
+npm run collection:manifest -- --out ./pizza-comrades-images
+
+# Download every image (takes a while; be polite to public infra)
+npm run collection:download -- --out ./pizza-comrades-images
+```
+
+Override parent if needed: `node scripts/download-collection.mjs --parent <inscription_id> --out ./out`
+
 ## Develop
 
 ```bash

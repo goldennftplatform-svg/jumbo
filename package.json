@@ -9,7 +9,9 @@
     "dev:clean": "npm run clean && npm run dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "collection:download": "node scripts/download-collection.mjs",
+    "collection:manifest": "node scripts/download-collection.mjs --manifest-only"
   },
   "dependencies": {
     "next": "^14.2.18",

@@ -26,3 +26,7 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# bulk ordinal downloads (local only)
+pizza-comrades-images/
+_test-manifest/
