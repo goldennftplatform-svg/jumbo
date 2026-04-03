@@ -23,6 +23,8 @@ export default function Home() {
   const [blockscript, setBlockscript] = useState(false);
   const [edge, setEdge] = useState<EdgeOption>(4096);
   const [format, setFormat] = useState<ExportFormat>("jpeg");
+  /** Neural 2× pass (UpscalerJS) before Lanczos — better on tiny/pixel art; slower + model download first time */
+  const [useAiEnhance, setUseAiEnhance] = useState(false);
 
   useEffect(() => {
     try {
@@ -43,7 +45,7 @@ export default function Home() {
       return null;
     });
     setStatus((s) => (s === "done" ? "idle" : s));
-  }, [edge, format]);
+  }, [edge, format, useAiEnhance]);
 
   const setBlockscriptPersist = useCallback((value: boolean) => {
     setBlockscript(value);
@@ -69,6 +71,7 @@ export default function Home() {
           edge,
           format,
           jpegQuality: 0.92,
+          useAiEnhance,
         });
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
@@ -80,7 +83,7 @@ export default function Home() {
         setProgress("");
       }
     },
-    [resetOutput, edge, format]
+    [resetOutput, edge, format, useAiEnhance]
   );
 
   const onFile = useCallback(
@@ -143,7 +146,7 @@ export default function Home() {
               Pizza Comrades Upsizer
             </h1>
             <p className="mt-1 text-xs text-zinc-500">
-              Preview {PREVIEW}×{PREVIEW} · export up to 4096×4096
+              Staged Lanczos (2× steps) · preview {PREVIEW}×{PREVIEW} · export up to 4096×4096
             </p>
           </div>
           <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-zinc-500">
@@ -195,6 +198,18 @@ export default function Home() {
               <option value="jpeg">JPEG — smaller, opens everywhere (recommended)</option>
               <option value="png">PNG — lossless, much larger</option>
             </select>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={useAiEnhance}
+              onChange={(e) => setUseAiEnhance(e.target.checked)}
+              disabled={status === "working"}
+              className="rounded border-zinc-600 bg-zinc-900"
+            />
+            <span className="max-w-[220px] text-zinc-400">
+              AI enhance (2×) — sharper on small/pixel art; first run downloads model
+            </span>
           </label>
         </div>
 

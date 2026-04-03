@@ -13,12 +13,18 @@ export type UpscaleOptions = {
   format: ExportFormat;
   /** JPEG quality 0–1; ignored for PNG */
   jpegQuality: number;
+  /**
+   * Run neural 2× (ESRGAN-style) in the browser before final Lanczos steps.
+   * Better detail on tiny/pixel art; slower and downloads ~few MB model on first use.
+   */
+  useAiEnhance: boolean;
 };
 
 const defaultOptions: UpscaleOptions = {
   edge: 4096,
   format: "jpeg",
   jpegQuality: 0.92,
+  useAiEnhance: false,
 };
 
 export async function loadPica(): Promise<typeof Pica> {
@@ -33,19 +39,135 @@ function clampEdge(n: number): number {
   return e;
 }
 
+type PicaLike = {
+  resize: (
+    from: HTMLCanvasElement,
+    to: HTMLCanvasElement,
+    opts?: { quality?: 0 | 1 | 2 | 3 }
+  ) => Promise<unknown>;
+};
+
+/** Downscale in one step; upscale in ~2× steps (Lanczos) for cleaner results than one huge jump. */
+async function picaResizeStaged(
+  pica: PicaLike,
+  source: HTMLCanvasElement,
+  targetEdge: number,
+  onProgress?: (stage: string) => void
+): Promise<HTMLCanvasElement> {
+  const p = pica;
+
+  let w = source.width;
+  const h = source.height;
+  if (w !== h) throw new Error("Expected square canvas.");
+  if (w === targetEdge) return source;
+
+  if (w > targetEdge) {
+    onProgress?.(`Resampling ${w}→${targetEdge}px…`);
+    const out = document.createElement("canvas");
+    out.width = targetEdge;
+    out.height = targetEdge;
+    const octx = out.getContext("2d", { alpha: false });
+    if (!octx) throw new Error("Could not get 2D context.");
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0, 0, targetEdge, targetEdge);
+    await p.resize(source, out, { quality: 3 });
+    return out;
+  }
+
+  let current: HTMLCanvasElement = source;
+  while (w < targetEdge) {
+    const next = Math.min(w * 2, targetEdge);
+    onProgress?.(`Resampling ${w}→${next}px…`);
+    const out = document.createElement("canvas");
+    out.width = next;
+    out.height = next;
+    const octx = out.getContext("2d", { alpha: false });
+    if (!octx) throw new Error("Could not get 2D context.");
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0, 0, next, next);
+    await p.resize(current, out, { quality: 3 });
+    current = out;
+    w = next;
+  }
+  return current;
+}
+
+/** Optional: neural upscale (2×) on a small square canvas, then you finish with staged pica. */
+async function runAiEnhance(
+  source: HTMLCanvasElement,
+  onProgress?: (stage: string) => void
+): Promise<HTMLCanvasElement> {
+  const maxIn = 512;
+  const side = source.width;
+  const PicaCtor = await loadPica();
+  const pica = PicaCtor();
+
+  let input = source;
+  if (side > maxIn) {
+    onProgress?.(`Preparing for AI (${side}→${maxIn}px)…`);
+    const small = document.createElement("canvas");
+    small.width = maxIn;
+    small.height = maxIn;
+    const sctx = small.getContext("2d", { alpha: false });
+    if (!sctx) throw new Error("Could not get 2D context.");
+    sctx.fillStyle = "#ffffff";
+    sctx.fillRect(0, 0, maxIn, maxIn);
+    await pica.resize(source, small, { quality: 3 });
+    input = small;
+  }
+
+  onProgress?.("Loading AI model (first run downloads weights)…");
+  const Upscaler = (await import("upscaler")).default;
+  const defaultModel = (await import("@upscalerjs/default-model")).default;
+  const upscaler = new Upscaler({ model: defaultModel });
+  await upscaler.ready;
+
+  onProgress?.("AI upscaling (2×)…");
+  const result = await upscaler.upscale(input);
+  await upscaler.dispose();
+
+  const dataUrl =
+    typeof result === "string"
+      ? result
+      : (() => {
+          throw new Error("Unexpected upscale output");
+        })();
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Could not decode AI result."));
+    img.src = dataUrl;
+  });
+
+  const out = document.createElement("canvas");
+  out.width = img.naturalWidth;
+  out.height = img.naturalHeight;
+  const ctx = out.getContext("2d", { alpha: false });
+  if (!ctx) throw new Error("Could not get 2D context.");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(img, 0, 0);
+  return out;
+}
+
 /**
- * JPEG has no alpha. Browsers composite transparent / unset canvas pixels onto black when
- * encoding JPEG → solid black image. We always paint onto opaque white-backed canvases.
+ * Square crop → optional AI 2× → staged Lanczos to target → encode.
+ * JPEG: opaque white backing to avoid black output.
  */
 export async function upscaleToTarget(
   image: HTMLImageElement,
   onProgress?: (stage: string) => void,
   opts: Partial<UpscaleOptions> = {}
 ): Promise<Blob> {
-  const { edge, format, jpegQuality } = { ...defaultOptions, ...opts };
+  const { edge, format, jpegQuality, useAiEnhance } = {
+    ...defaultOptions,
+    ...opts,
+  };
   const outEdge = clampEdge(edge);
 
-  onProgress?.("Resampling…");
+  onProgress?.("Cropping square…");
   const PicaCtor = await loadPica();
   const pica = PicaCtor();
 
@@ -68,21 +190,29 @@ export async function upscaleToTarget(
   sctx.fillRect(0, 0, side, side);
   sctx.drawImage(image, sx, sy, side, side, 0, 0, side, side);
 
-  const outCanvas = document.createElement("canvas");
-  outCanvas.width = outEdge;
-  outCanvas.height = outEdge;
-  const octx = outCanvas.getContext("2d", { alpha: false });
-  if (!octx) throw new Error("Could not get 2D context.");
-  octx.fillStyle = "#ffffff";
-  octx.fillRect(0, 0, outEdge, outEdge);
+  let working: HTMLCanvasElement = sourceCanvas;
 
-  await pica.resize(sourceCanvas, outCanvas, { quality: 3 });
+  if (useAiEnhance) {
+    try {
+      working = await runAiEnhance(working, onProgress);
+    } catch (e) {
+      console.warn("AI enhance failed, using Lanczos only:", e);
+      onProgress?.("AI failed — using Lanczos only…");
+      working = sourceCanvas;
+    }
+  }
+
+  const outCanvas = await picaResizeStaged(
+    pica,
+    working,
+    outEdge,
+    onProgress
+  );
 
   onProgress?.(format === "jpeg" ? "Encoding JPEG…" : "Encoding PNG…");
 
   const mime = format === "jpeg" ? "image/jpeg" : "image/png";
 
-  // Extra flatten for JPEG: some engines still premultiply oddly from WebGL paths in pica
   const encodeCanvas =
     format === "jpeg" ? flattenOpaqueWhite(outCanvas) : outCanvas;
 
